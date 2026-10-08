@@ -1,8 +1,0 @@
-Metadata-Version: 2.4
-Name: pubman
-Version: 0.1.0
-Requires-Python: >=3.9
-Requires-Dist: requests>=2.28
-Requires-Dist: pyyaml>=6.0
-Requires-Dist: bibtexparser<2.0,>=1.4
-Requires-Dist: tomli>=2.0; python_version < "3.11"
