@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import subprocess
 import sys
 from pathlib import Path
 
@@ -44,6 +45,42 @@ def _print_figure_paths(key: str, config: Config) -> None:
     if config.cv:
         fpath = config.cv.figures_dir / (key + ".jpg")
         print(f"    {'cv':12}: {fpath.relative_to(config.root)}")
+
+
+def _rebuild_cv(config: Config) -> None:
+    if not (config.cv and config.cv.build_cmd):
+        return
+    print("  Rebuilding CV PDF ...")
+    result = subprocess.run(
+        config.cv.build_cmd,
+        shell=True,
+        cwd=config.cv.tex.parent,
+        capture_output=True,
+    )
+    if result.returncode == 0:
+        pdf = config.cv.tex.with_suffix(".pdf")
+        print(f"  → {pdf.relative_to(config.root)}")
+        return
+
+    # pdflatex writes errors to stdout; extract the actionable lines
+    print(f"\n  CV build failed (exit {result.returncode}).")
+    stdout_lines = result.stdout.decode(errors="replace").splitlines()
+    error_block: list[str] = []
+    for i, ln in enumerate(stdout_lines):
+        if ln.startswith("!"):
+            # include the error line plus the "l.NN ..." source location that follows
+            error_block.append(ln)
+            for j in range(i + 1, min(i + 4, len(stdout_lines))):
+                if stdout_lines[j].startswith("l.") or stdout_lines[j].strip():
+                    error_block.append("  " + stdout_lines[j])
+                else:
+                    break
+    if error_block:
+        print()
+        for ln in error_block:
+            print(f"    {ln}")
+    log = config.cv.tex.with_suffix(".log")
+    print(f"\n  Full log: {log}")
 
 
 def _regenerate(manifest: list, config: Config) -> None:
@@ -109,6 +146,8 @@ def cmd_bulk_add(args, manifest: list, config: Config) -> None:
         for key, entry in added:
             cv_mod.update_cv_tex(key, entry["category"], config.cv, config.root)
 
+    _rebuild_cv(config)
+
     print("\nAdded:")
     for key, entry in added:
         source = "(CrossRef)" if entry.get("doi") else "(ORCID)"
@@ -159,6 +198,8 @@ def cmd_add(args, manifest: list, config: Config) -> None:
     if config.cv:
         cv_mod.update_cv_tex(key, category, config.cv, config.root)
 
+    _rebuild_cv(config)
+
     _print_figure_paths(key, config)
 
     if not entry.get("featured"):
@@ -199,6 +240,7 @@ def main() -> None:
     if args.regenerate:
         print("Regenerating outputs from manifest ...")
         _regenerate(manifest, config)
+        _rebuild_cv(config)
     elif args.orcid:
         cmd_bulk_add(args, manifest, config)
     else:

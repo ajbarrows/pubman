@@ -25,6 +25,7 @@ class CVConfig:
     tex: Path
     figures_dir: Path
     section_map: dict[str, str] = field(default_factory=dict)
+    build_cmd: Optional[str] = None
 
 
 @dataclass
@@ -33,6 +34,7 @@ class GeneratorConfig:
     module: str
     output: Path
     extra: dict = field(default_factory=dict)
+    root: Optional[Path] = None
 
 
 @dataclass
@@ -81,6 +83,7 @@ def load_config(path: Optional[Path] = None) -> Config:
             tex=root / c["tex"],
             figures_dir=root / c["figures_dir"],
             section_map=c.get("section_map", {}),
+            build_cmd=c.get("build_cmd"),
         )
 
     generators = []
@@ -91,6 +94,7 @@ def load_config(path: Optional[Path] = None) -> Config:
             module=g["module"],
             output=root / g["output"],
             extra=extra,
+            root=root,
         ))
 
     return Config(
