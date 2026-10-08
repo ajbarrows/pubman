@@ -10,12 +10,35 @@ MANAGED_MARKER = "pubman_managed"
 INCLUDE_CATEGORIES = ("peer-reviewed",)
 
 
+def _normalize(s: str) -> str:
+    return s.replace("‘", "'").replace("’", "'").replace("‛", "'")
+
+
 def _format_author(a: dict) -> str:
-    first = (a.get("first") or "").strip()
-    last = (a.get("last") or "").strip()
+    first = _normalize((a.get("first") or "").strip())
+    last = _normalize((a.get("last") or "").strip())
     if first and last:
         return f"{last}, {first}"
     return last or first
+
+
+_MONTH_NAMES = {
+    "january": 1, "february": 2, "march": 3, "april": 4,
+    "may": 5, "june": 6, "july": 7, "august": 8,
+    "september": 9, "october": 10, "november": 11, "december": 12,
+}
+
+
+def _parse_month(value) -> int | None:
+    if value is None:
+        return None
+    if isinstance(value, int):
+        return value if 1 <= value <= 12 else None
+    normalized = str(value).strip().lower()
+    if normalized.isdigit():
+        m = int(normalized)
+        return m if 1 <= m <= 12 else None
+    return _MONTH_NAMES.get(normalized)
 
 
 def _entry_to_frontmatter(entry: dict) -> dict:
@@ -32,6 +55,9 @@ def _entry_to_frontmatter(entry: dict) -> dict:
         MANAGED_MARKER: True,
         "featured": bool(entry.get("featured", False)),
     }
+    month = _parse_month(entry.get("month"))
+    if month is not None:
+        fm["month"] = month
     if url:
         fm["links"] = {"website": url}
     image = (entry.get("image") or "").strip() or None
