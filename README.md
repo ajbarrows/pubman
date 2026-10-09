@@ -65,6 +65,9 @@ pubman --doi 10.1234/example --category invited-talk
 
 # Regenerate all outputs without adding anything new
 pubman --regenerate
+
+# Strip doi.org URL prefixes from existing DOIs, then regenerate
+pubman --fix-dois
 ```
 
 After adding an entry, pubman prints the generated key (e.g. `SmJo24`) and tells you where to drop the figure file. Set `featured: true` in `publications.yaml` to include an entry on your website.

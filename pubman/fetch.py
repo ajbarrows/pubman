@@ -6,7 +6,7 @@ from pathlib import Path
 
 import requests
 
-from .manifest import MONTH_NUM
+from .manifest import MONTH_NUM, normalize_doi
 
 CROSSREF_URL = "https://api.crossref.org/works/{doi}"
 ORCID_BASE = "https://pub.orcid.org/v3.0"
@@ -27,8 +27,9 @@ _ORCID_TYPE_MAP: dict[str, tuple[str, str]] = {
 
 def fetch_crossref(doi: str, user_agent: str = "pubman/1.0") -> dict:
     """Fetch and normalize metadata from the CrossRef REST API."""
+    doi = normalize_doi(doi) or ""
     r = requests.get(
-        CROSSREF_URL.format(doi=doi.strip()),
+        CROSSREF_URL.format(doi=doi),
         headers={"User-Agent": user_agent},
         timeout=15,
     )
@@ -62,7 +63,7 @@ def fetch_crossref(doi: str, user_agent: str = "pubman/1.0") -> dict:
         "volume": msg.get("volume") or None,
         "number": msg.get("issue") or None,
         "pages": pages,
-        "doi": doi.strip(),
+        "doi": doi,
         "abstract": abstract,
     }
 
@@ -100,9 +101,7 @@ def _orcid_get(url: str, user_agent: str) -> dict:
 def _extract_doi(external_ids: dict | None) -> str | None:
     for eid in (external_ids or {}).get("external-id") or []:
         if eid.get("external-id-type") == "doi":
-            val = re.sub(r"^https?://(?:dx\.)?doi\.org/", "",
-                         eid.get("external-id-value", "")).strip()
-            return val or None
+            return normalize_doi(eid.get("external-id-value"))
     return None
 
 
@@ -240,8 +239,7 @@ def parse_bibtex(path: Path) -> list:
         else:
             month = int(raw_month) if raw_month else None
 
-        doi = e.get("doi") or ""
-        doi = re.sub(r"^https?://(?:dx\.)?doi\.org/", "", doi).strip() or None
+        doi = normalize_doi(e.get("doi"))
 
         results.append({
             "type": e.get("ENTRYTYPE", "article"),

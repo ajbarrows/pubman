@@ -16,6 +16,7 @@ from .manifest import (
     find_duplicate,
     generate_key,
     load,
+    normalize_doi,
     save,
 )
 
@@ -207,6 +208,28 @@ def cmd_add(args, manifest: list, config: Config) -> None:
         print(f"  Set `featured: true` in publications.yaml to include it.")
 
 
+def cmd_fix_dois(manifest: list, config: Config) -> None:
+    fixed = []
+    for entry in manifest:
+        doi = entry.get("doi")
+        if doi and normalize_doi(doi) != doi:
+            entry["doi"] = normalize_doi(doi)
+            fixed.append((entry["key"], doi, entry["doi"]))
+
+    if not fixed:
+        print("All DOIs already normalized.")
+        return
+
+    save(manifest, config.manifest_path)
+    print(f"Normalized {len(fixed)} DOI(s):")
+    for key, old, new in fixed:
+        print(f"  {key:20} {old}  →  {new}")
+
+    print("\nUpdating outputs ...")
+    _regenerate(manifest, config)
+    _rebuild_cv(config)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Add a publication to the manifest and regenerate outputs.",
@@ -226,6 +249,8 @@ def main() -> None:
     )
     src.add_argument("--regenerate", action="store_true",
                      help="Regenerate outputs without adding a new entry")
+    src.add_argument("--fix-dois", action="store_true",
+                     help="Normalize existing DOIs (strip doi.org URL prefixes) and regenerate outputs")
     parser.add_argument(
         "--category", choices=VALID_CATEGORIES,
         help="Override inferred category for --doi/--bib (ignored for --orcid). "
@@ -241,6 +266,8 @@ def main() -> None:
         print("Regenerating outputs from manifest ...")
         _regenerate(manifest, config)
         _rebuild_cv(config)
+    elif args.fix_dois:
+        cmd_fix_dois(manifest, config)
     elif args.orcid:
         cmd_bulk_add(args, manifest, config)
     else:

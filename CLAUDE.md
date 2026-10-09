@@ -12,6 +12,7 @@ pubman --doi <DOI>          # Add publication by DOI (fetches from CrossRef)
 pubman --bib <FILE>         # Add publication from a BibTeX file
 pubman --orcid <ORCID_ID>   # Bulk-import all works from an ORCID profile
 pubman --regenerate         # Regenerate all outputs without adding new entries
+pubman --fix-dois           # Strip doi.org URL prefixes from existing DOIs, then regenerate
 pubman --config <FILE>      # Override config path (default: walks up from cwd)
 pubman --category <CAT>     # Override inferred category
 

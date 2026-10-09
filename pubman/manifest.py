@@ -30,16 +30,25 @@ def save(entries: list, path: Path) -> None:
                   default_flow_style=False, width=120)
 
 
+def normalize_doi(doi: str | None) -> str | None:
+    """Strip whitespace, a doi.org URL prefix, a "doi:" prefix and trailing slashes."""
+    if not doi:
+        return None
+    doi = re.sub(r"^(?:https?://(?:dx\.)?doi\.org/|doi:)", "", doi.strip(), flags=re.I)
+    return doi.strip().rstrip("/") or None
+
+
 def _normalize(title: str) -> str:
     return re.sub(r"\s+", " ", re.sub(r"[^\w\s]", "", title.lower())).strip()
 
 
 def find_duplicate(manifest: list, doi=None, title=None):
     """Return (entry, reason_str) if duplicate found, else (None, None)."""
+    doi = normalize_doi(doi)
     for entry in manifest:
         if doi:
-            existing = (entry.get("doi") or "").strip().rstrip("/")
-            if existing and existing == doi.strip().rstrip("/"):
+            existing = normalize_doi(entry.get("doi"))
+            if existing and existing.lower() == doi.lower():
                 return entry, "DOI match"
         if title:
             ratio = SequenceMatcher(None, _normalize(title), _normalize(entry["title"])).ratio()
